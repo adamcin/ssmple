@@ -3,7 +3,7 @@ ssmple CLI
 
 Config File Management tool using AWS SSM Shared Parameter Store, serialized to JSON, YAML, or Java properties files on hosts.
 
-see [ssmple-java](https://github.com/adamcin/ssmple) for legacy impl
+see [ssmple-java](https://github.com/adamcin/ssmple-java) for legacy impl
 
 Usage
 -----
