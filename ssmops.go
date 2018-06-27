@@ -29,33 +29,23 @@ func findAllParametersForPath(ctx *CmdContext, paramPath string) ([]ssm.Paramete
 	recursive := false
 	withDecryption := true
 
-	findParametersForPath := func(nextToken *string) (*string, error) {
-		input := ssm.GetParametersByPathInput{
-			MaxResults:     &maxResults,
-			Path:           &paramPath,
-			WithDecryption: &withDecryption,
-			NextToken:      nextToken,
-			Recursive:      &recursive}
+	input := ssm.GetParametersByPathInput{
+		MaxResults:     &maxResults,
+		Path:           &paramPath,
+		WithDecryption: &withDecryption,
+		Recursive:      &recursive}
 
-		result, err := ctx.Ssms.GetParametersByPathRequest(&input).Send()
-		if err != nil {
-			return nil, err
-		}
-
+	request := ctx.Ssms.GetParametersByPathRequest(&input)
+	pager := request.Paginate()
+	for pager.Next() {
+		result := pager.CurrentPage()
 		if len(result.Parameters) > 0 {
 			paramsForPath = append(paramsForPath, result.Parameters...)
-			return result.NextToken, nil
-		} else {
-			return nil, nil
 		}
 	}
 
-	token, err := findParametersForPath(nil)
-	for ; token != nil && err == nil; token, err = findParametersForPath(token) {
-		// iterate until no more next tokens or error
-	}
-	if err != nil {
-		return nil, err
+	if pager.Err() != nil {
+		return paramsForPath, pager.Err()
 	} else {
 		return paramsForPath, nil
 	}
@@ -73,7 +63,7 @@ func unescapeValueAfterGet(value string) string {
 			return value
 		}
 	}
-	return string(runes[0 : len(runes)-1])
+	return string(runes[0: len(runes)-1])
 }
 
 // If value is the empty string or all spaces, add a space so the value is non-empty for SSM.
