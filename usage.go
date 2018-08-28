@@ -34,7 +34,8 @@ GLOBAL OPTIONS
 
   -h | --help                           : print this help message
   -p | --profile                        : set AWS profile
-  -r | --region                         : set AWS region`, argv0)
+  -r | --region                         : set AWS region
+       --use-ec2-role                   : allow attempt to resolve EC2 instance role credentials from host endpoint`, argv0)
 
 	fmt.Println(globalHelp)
 	fmt.Println(help(operation))

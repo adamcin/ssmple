@@ -18,6 +18,7 @@ package main
 
 import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"path"
 	"strings"
 )
 
@@ -128,27 +129,33 @@ func getParamsPerPath(ctx *CmdContext, paramPath string, storeDict *map[string]s
 // Build an SSM parameter path or name.
 // prefix:   hierarchy levels 0-(N-2)
 // filename: hierarchy level N-1 (.properties, .json, or .yaml extensions will be stripped)
-// key:  	 optional, hierarchy level N
+// key:      optional, hierarchy level N
+// TODO make platform independent (i.e., this won't work on windows)
 func buildParameterPath(prefix string, filename string, key string) string {
-	sb := prefix
-	if !strings.HasSuffix(sb, "/") {
-		sb += "/"
+	dir := prefix
+	if !strings.HasPrefix(dir, "/") {
+		dir = "/" + dir
 	}
+
+	fn := filename
 	if len(filename) == 0 {
-		sb += "$"
-	} else if strings.ContainsRune(filename, '.') {
-		fnRunes := []rune(filename)
-		sb += string(fnRunes[0:strings.LastIndex(filename, ".")])
-	} else {
-		sb += filename
+		fn = "$"
 	}
+
+	base := path.Join(prefix, fn)
+	realdir := path.Dir(base)
+	realfn := path.Base(base)
+
+	if len(realfn) > 0 && strings.ContainsRune(realfn, '.') {
+		fnRunes := []rune(realfn)
+		realfn = string(fnRunes[0:strings.LastIndex(realfn, ".")])
+	}
+
 	if len(key) > 0 {
-		if !strings.HasSuffix(sb, "/") {
-			sb += "/"
-		}
-		sb += key
+		return path.Join(realdir, realfn, key)
+	} else {
+		return path.Join(realdir, realfn)
 	}
-	return sb
 }
 
 func getParamsPerFile(ctx *CmdContext, filename string) error {

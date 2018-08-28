@@ -29,6 +29,9 @@ import (
 )
 
 type ParsedArgs struct {
+	// flag to enable credential resolution from ec2 endpoint
+	UseEc2Role bool
+
 	// pass-through profile and region args to aws sdk
 	AwsProfile, AwsRegion string
 
@@ -65,6 +68,7 @@ const NoOptPrefix = "--no-"
 func parseArgs() ParsedArgs {
 	awsProfile := ""
 	awsRegion := ""
+	useEc2Role := false
 	ssmCmd := ""
 	rawConfDir := "."
 	_, cwdErr := os.Getwd()
@@ -98,6 +102,8 @@ func parseArgs() ParsedArgs {
 		case "-r", "--region":
 			awsRegion = os.Args[i+1]
 			i++
+		case "-use-ec2-role":
+			useEc2Role = !isNoOpt
 		case "-C", "--conf-dir":
 			rawConfDir = os.Args[i+1]
 			i++
@@ -150,6 +156,7 @@ func parseArgs() ParsedArgs {
 	}
 
 	return ParsedArgs{
+		UseEc2Role:          useEc2Role,
 		AwsProfile:          awsProfile,
 		AwsRegion:           awsRegion,
 		SsmCmd:              ssmCmd,
@@ -163,27 +170,48 @@ func parseArgs() ParsedArgs {
 		NoPutSecureString:   noPutSecureString}
 }
 
+func getAwsConfigResolvers(authEc2 bool) []external.AWSConfigResolver {
+	resolvers := []external.AWSConfigResolver{
+		external.ResolveDefaultAWSConfig,
+		external.ResolveCustomCABundle,
+		external.ResolveRegion,
+	}
+
+	if authEc2 {
+		resolvers = append(resolvers, external.ResolveFallbackEC2Credentials)
+	}
+
+	resolvers = append(resolvers, external.ResolveCredentialsValue)
+	resolvers = append(resolvers, external.ResolveEndpointCredentials)
+	resolvers = append(resolvers, external.ResolveContainerEndpointPathCredentials)
+	resolvers = append(resolvers, external.ResolveAssumeRoleCredentials)
+
+	return resolvers
+}
+
 func main() {
 	prefs := parseArgs()
 
-	var awsCfg aws.Config
+	var cfgs external.Configs
+	var err error
+
 	if len(prefs.AwsProfile) > 0 {
-		cfg, err := external.LoadDefaultAWSConfig(
-			external.WithSharedConfigProfile(prefs.AwsProfile))
-		if err != nil {
-			log.Fatal(err)
-		}
-		awsCfg = cfg
-	} else {
-		cfg, err := external.LoadDefaultAWSConfig()
-		if err != nil {
-			log.Fatal(err)
-		}
-		awsCfg = cfg
+		cfgs = append(cfgs, external.WithSharedConfigProfile(prefs.AwsProfile))
 	}
 
 	if len(prefs.AwsRegion) > 0 {
-		awsCfg.Region = prefs.AwsRegion
+		cfgs = append(cfgs, external.WithRegion(prefs.AwsRegion))
+	}
+
+	if cfgs, err = cfgs.AppendFromLoaders(external.DefaultConfigLoaders); err != nil {
+		log.Fatal(err)
+	}
+
+	resolvers := getAwsConfigResolvers(prefs.UseEc2Role)
+
+	awsCfg, err := cfgs.ResolveAWSConfig(resolvers)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	execCmd(prefs, awsCfg)
