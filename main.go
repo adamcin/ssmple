@@ -102,7 +102,7 @@ func parseArgs() ParsedArgs {
 		case "-r", "--region":
 			awsRegion = os.Args[i+1]
 			i++
-		case "-use-ec2-role":
+		case "--use-ec2-role":
 			useEc2Role = !isNoOpt
 		case "-C", "--conf-dir":
 			rawConfDir = os.Args[i+1]
