@@ -91,7 +91,7 @@ func getParamsPerPath(ctx *CmdContext, paramPath string, storeDict *map[string]s
 		name := *param.Name
 
 		if param.Type == ssm.ParameterTypeStringList ||
-			(ctx.Prefs.NoStoreSecureString && param.Type == ssm.ParameterTypeSecureString) {
+			(ctx.Prefs.NoGetSecureString && param.Type == ssm.ParameterTypeSecureString) {
 			continue
 		}
 
@@ -102,7 +102,7 @@ func getParamsPerPath(ctx *CmdContext, paramPath string, storeDict *map[string]s
 		storeKey := strings.TrimPrefix(name, paramPath+"/")
 		(*storeDict)[storeKey] = unescapeValueAfterGet(*param.Value)
 
-		if param.Type == ssm.ParameterTypeSecureString {
+		if param.Type == ssm.ParameterTypeSecureString && ctx.Prefs.GetKeyId {
 			sidecarStoreKey := storeKey + KeyIdSuffix
 			input := ssm.DescribeParametersInput{}
 			input.ParameterFilters = append(input.ParameterFilters,

@@ -66,7 +66,7 @@ OPERATION
 
     USAGE
 
-      %[1]s get [ --no-store-secure-string ] -s <prefix> [ [ -s <prefix> ] ... ] [ -C <confDir> ] 
+      %[1]s get [ --no-get-secure-string ] [ --get-key-id ] -s <prefix> [ [ -s <prefix> ] ... ] [ -C <confDir> ] 
             -f filename [ [ -f filename ] ... ]
 
     OPTIONS
@@ -76,7 +76,9 @@ OPERATION
       -C | --conf-dir                   : specify a base configuration directory, against which filenames are resolved relatively. Defaults to $CWD.
       -f | --filename                   : specify a configuration filename. this is resolved as a path relative to the -C confDir, and the basename of
                                           the filename (filename minus last extension) is treated as a suffix appended to each SSM param path prefix in turn.
-           --no-store-secure-string     : if a parameter is of type SecureString, it will not be saved to the file.
+           --no-get-secure-string       : if a parameter is of type SecureString, it will not be saved to the file.
+           --get-key-id                 : if a parameter is of type SecureString, save its associated KMS keyId/alias to the file with the parameter 
+                                          name suffixed with "_SecureStringKeyId".
 
     EXAMPLES
 

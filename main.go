@@ -51,7 +51,10 @@ type ParsedArgs struct {
 	ClearOnPut bool
 
 	// true to avoid storing secure string parameters on get
-	NoStoreSecureString bool
+	NoGetSecureString bool
+
+	// true to save the secure string KMS key ID/alias on get
+	GetKeyId bool
 
 	// true to avoid sending secure strings on put
 	NoPutSecureString bool
@@ -82,7 +85,8 @@ func parseArgs() ParsedArgs {
 	keyIdPutAll := ""
 	overwritePut := false
 	clearOnPut := false
-	noStoreSecureString := false
+	noGetSecureString := false
+	getKeyId := false
 	noPutSecureString := false
 	isHelp := false
 
@@ -120,8 +124,10 @@ func parseArgs() ParsedArgs {
 			overwritePut = !isNoOpt
 		case "--clear-on-put":
 			clearOnPut = !isNoOpt
-		case "--store-secure-string":
-			noStoreSecureString = isNoOpt
+		case "--get-secure-string", /* deprecated */ "--store-secure-string":
+			noGetSecureString = isNoOpt
+		case "--get-key-id":
+			getKeyId = !isNoOpt
 		case "--put-secure-string":
 			noPutSecureString = isNoOpt
 		case "get", "put", "delete", "clear":
@@ -156,18 +162,19 @@ func parseArgs() ParsedArgs {
 	}
 
 	return ParsedArgs{
-		UseEc2Role:          useEc2Role,
-		AwsProfile:          awsProfile,
-		AwsRegion:           awsRegion,
-		SsmCmd:              ssmCmd,
-		ConfDir:             confDir,
-		Filenames:           filenames,
-		Prefixes:            prefixes,
-		KeyIdPutAll:         keyIdPutAll,
-		OverwritePut:        overwritePut,
-		ClearOnPut:          clearOnPut,
-		NoStoreSecureString: noStoreSecureString,
-		NoPutSecureString:   noPutSecureString}
+		UseEc2Role:        useEc2Role,
+		AwsProfile:        awsProfile,
+		AwsRegion:         awsRegion,
+		SsmCmd:            ssmCmd,
+		ConfDir:           confDir,
+		Filenames:         filenames,
+		Prefixes:          prefixes,
+		KeyIdPutAll:       keyIdPutAll,
+		OverwritePut:      overwritePut,
+		ClearOnPut:        clearOnPut,
+		NoGetSecureString: noGetSecureString,
+		GetKeyId:          getKeyId,
+		NoPutSecureString: noPutSecureString}
 }
 
 func getAwsConfigResolvers(authEc2 bool) []external.AWSConfigResolver {
@@ -242,7 +249,7 @@ func execCmd(prefs ParsedArgs, cfg aws.Config) {
 
 	switch strings.ToLower(prefs.SsmCmd) {
 	case "get":
-		if !prefs.NoStoreSecureString {
+		if !prefs.NoGetSecureString {
 			buildAliasList(kmss, &kmsMap)
 		}
 		doGet(&ctx)
